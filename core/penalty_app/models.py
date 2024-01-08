@@ -21,7 +21,7 @@ class Game(models.Model):
     chat_id = models.CharField(max_length=2555)
     message_id = models.CharField(max_length=2555, null=True)
     state = models.CharField(max_length=255, default="collecting")
-    waiting_time = models.DateTimeField(default=timezone.now() + timezone.timedelta(minutes=2))
+    waiting_time = models.DateTimeField(default=timezone.now() + timezone.timedelta(minutes=10))
 
 
 class Round(models.Model):

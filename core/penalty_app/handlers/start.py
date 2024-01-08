@@ -43,4 +43,4 @@ async def start_command(msg: Message, state: FSMContext, bot: Bot, command: Comm
         elif user in game_players:
             await msg.answer("Ты уже в игре, детка!")
             return
-    await msg.answer("ДЕТКА БЕЙБИ, БОТ ГОТОВИТСЯ, СКОРО ВСЁ НАЧНЁТСЯ!!!")
+
