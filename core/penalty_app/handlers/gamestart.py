@@ -17,10 +17,6 @@ from .rounds import round_sender, name
 
 @router.message(Command("gamestart"))
 async def start_game_command(msg: Message, state: FSMContext, bot: Bot, command: CommandObject):
-    try:
-        await msg.delete()
-    except Exception as e:
-        print("Нет прав", e)
     game, created = await sync_to_async(Game.objects.get_or_create)(chat_id=msg.chat.id, over=False)
     if not created and not game.over:
         if timezone.now() - game.created_time > timezone.timedelta(minutes=30):
