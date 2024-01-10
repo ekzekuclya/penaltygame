@@ -16,12 +16,13 @@ class TelegramUser(models.Model):
 
 class Game(models.Model):
     date_started = models.DateTimeField(auto_now_add=True)
-    players = models.ManyToManyField(TelegramUser)
+    players = models.ManyToManyField(TelegramUser, blank=True)
     over = models.BooleanField(default=False)
     chat_id = models.CharField(max_length=2555)
     message_id = models.CharField(max_length=2555, null=True)
     state = models.CharField(max_length=255, default="collecting")
-    waiting_time = models.DateTimeField(default=timezone.now() + timezone.timedelta(minutes=2))
+    created_time = models.DateTimeField(default=timezone.now())
+    waiting_time2 = models.IntegerField(default=2)
 
 
 class Round(models.Model):
@@ -32,7 +33,8 @@ class Round(models.Model):
     user2_choice = models.PositiveIntegerField(null=True, blank=True)
     chat_id = models.CharField(max_length=2555)
     message_id = models.CharField(max_length=2555, null=True)
-    waiting_time = models.DateTimeField(default=timezone.now() + timezone.timedelta(minutes=5))
+    waiting_time2 = models.IntegerField(default=12)
+    moved = models.BooleanField(default=False)
 
 
 class Result(models.Model):
