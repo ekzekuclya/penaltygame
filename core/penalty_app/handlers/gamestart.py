@@ -18,7 +18,7 @@ from .rounds import round_sender, name
 @router.message(Command("gamestart"))
 async def start_game_command(msg: Message, state: FSMContext, bot: Bot, command: CommandObject):
     game, created = await sync_to_async(Game.objects.get_or_create)(chat_id=msg.chat.id, over=False)
-    if not created and not game.over:
+    if created:
         players_text = 'Участники: \n'
         builder = InlineKeyboardBuilder()
         builder.add(
@@ -133,18 +133,19 @@ async def extend_time(msg: Message, bot: Bot):
 @router.message(Command("startnow"))
 async def start_now(msg: Message, bot: Bot):
     game = await sync_to_async(Game.objects.filter)(chat_id=msg.chat.id, over=False)
-    if game.state == 'collecting':
-        link_to_msg = (f"https://t.me/c/{game.chat_id[4:] if game.chat_id.startswith('-100') else game.chat_id[1:]}/"
-                       f"{game.message_id}")
-        sent = await msg.answer(f"[Игра уже начата]({link_to_msg})", parse_mode=ParseMode.MARKDOWN)
-        await asyncio.sleep(30)
-        try:
-            await bot.delete_message(sent.chat.id, sent.message_id)
-            return
-        except Exception as e:
-            return
     if game:
         game = game.first()
+        if game.state == 'started':
+            link_to_msg = (
+                f"https://t.me/c/{game.chat_id[4:] if game.chat_id.startswith('-100') else game.chat_id[1:]}/"
+                f"{game.message_id}")
+            sent = await msg.answer(f"[Игра уже начата]({link_to_msg})", parse_mode=ParseMode.MARKDOWN)
+            await asyncio.sleep(30)
+            try:
+                await bot.delete_message(sent.chat.id, sent.message_id)
+                return
+            except Exception as e:
+                return e
         if len(game.players.all()) <= 1:
             sent = await msg.answer("Недостаточно игроков для старта")
             try:
