@@ -19,43 +19,26 @@ from .rounds import round_sender, name
 async def start_game_command(msg: Message, state: FSMContext, bot: Bot, command: CommandObject):
     game, created = await sync_to_async(Game.objects.get_or_create)(chat_id=msg.chat.id, over=False)
     if not created and not game.over:
-        if timezone.now() - game.created_time > timezone.timedelta(minutes=30):
-            try:
-                await bot.delete_message(game.chat_id, game.message_id)
-            except Exception as e:
-                print("Не удалось удалить")
-            game.delete()
-            game, created = await sync_to_async(Game.objects.get_or_create)(chat_id=msg.chat.id, over=False)
-            players_text = 'Участники: \n'
-            builder = InlineKeyboardBuilder()
-            builder.add(
+        players_text = 'Участники: \n'
+        builder = InlineKeyboardBuilder()
+        builder.add(
                 InlineKeyboardButton(text="Принять участие", url=f"https://t.me/ekz_penaltybot?start={game.id}"))
 
-            sent_message = await msg.answer(players_text, reply_markup=builder.as_markup())
-            game.message_id = sent_message.message_id
-            game.save()
-            await awaiting_for_start(msg, game, bot)
-            return
-        else:
-            link_to_msg = (f"https://t.me/c/{game.chat_id[4:] if game.chat_id.startswith('-100') else game.chat_id[1:]}/"
+        sent_message = await msg.answer(players_text, reply_markup=builder.as_markup())
+        game.message_id = sent_message.message_id
+        game.save()
+        await awaiting_for_start(msg, game, bot)
+        await asyncio.sleep(10)
+        try:
+            await bot.delete_message(sent_message.chat.id, sent_message.message_id)
+        except Exception as e:
+            return e
+    else:
+        link_to_msg = (f"https://t.me/c/{game.chat_id[4:] if game.chat_id.startswith('-100') else game.chat_id[1:]}/"
                            f"{game.message_id}")
-            sent = await msg.answer(f"[Игра уже создана]({link_to_msg})", parse_mode=ParseMode.MARKDOWN)
-            await asyncio.sleep(5)
-            await bot.delete_message(sent.chat.id, sent.message_id)
-            return
-    game, created = await sync_to_async(Game.objects.get_or_create)(chat_id=msg.chat.id, over=False)
-    players_text = 'Участники: \n'
-    builder = InlineKeyboardBuilder()
-    builder.add(InlineKeyboardButton(text="Принять участие", url=f"https://t.me/ekz_penaltybot?start={game.id}"))
-
-    sent = sent_message = await msg.answer(players_text, reply_markup=builder.as_markup())
-    game.message_id = sent_message.message_id
-    game.save()
-    await awaiting_for_start(msg, game, bot)
-    await asyncio.sleep(10)
-    try:
+        sent = await msg.answer(f"[Игра уже создана]({link_to_msg})", parse_mode=ParseMode.MARKDOWN)
+        await asyncio.sleep(5)
         await bot.delete_message(sent.chat.id, sent.message_id)
-    except Exception as e:
         return
 
 
@@ -129,10 +112,11 @@ async def awaiting_for_start(msg, game, bot):
 #         await round_sender(game, bot)
 
 
+
 @router.message(Command("extendtime"))
 async def extend_time(msg: Message, bot: Bot):
-    game, created = await sync_to_async(Game.objects.get_or_create)(chat_id=msg.chat.id)
-    if not created and not game.over:
+    game, created = await sync_to_async(Game.objects.get_or_create)(chat_id=msg.chat.id, over=False)
+    if not created:
         game.waiting_time2 += 5
         game.save()
         await msg.answer("Набор игроков продлён на 5 минут")
@@ -149,7 +133,16 @@ async def extend_time(msg: Message, bot: Bot):
 @router.message(Command("startnow"))
 async def start_now(msg: Message, bot: Bot):
     game = await sync_to_async(Game.objects.filter)(chat_id=msg.chat.id, over=False)
-
+    if game.state == 'collecting':
+        link_to_msg = (f"https://t.me/c/{game.chat_id[4:] if game.chat_id.startswith('-100') else game.chat_id[1:]}/"
+                       f"{game.message_id}")
+        sent = await msg.answer(f"[Игра уже начата]({link_to_msg})", parse_mode=ParseMode.MARKDOWN)
+        await asyncio.sleep(30)
+        try:
+            await bot.delete_message(sent.chat.id, sent.message_id)
+            return
+        except Exception as e:
+            return 
     if game:
         game = game.first()
         if len(game.players.all()) <= 1:
