@@ -1,5 +1,7 @@
 import os
 import django
+from asgiref.sync import sync_to_async
+
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 django.setup()
@@ -15,6 +17,11 @@ async def main():
     from aiogram.fsm.storage.memory import MemoryStorage
     from aiogram import Bot, Dispatcher
     from penalty_app.handlers import start, gamestart, rounds
+    from penalty_app.models import Game
+    games = await sync_to_async(Game.objects.all)()
+    if games:
+        for i in games:
+            i.delete()
 
     bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.MARKDOWN)
     dp = Dispatcher(storage=MemoryStorage())

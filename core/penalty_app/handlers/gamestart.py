@@ -142,7 +142,7 @@ async def start_now(msg: Message, bot: Bot):
             await bot.delete_message(sent.chat.id, sent.message_id)
             return
         except Exception as e:
-            return 
+            return
     if game:
         game = game.first()
         if len(game.players.all()) <= 1:
