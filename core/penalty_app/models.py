@@ -22,7 +22,7 @@ class Game(models.Model):
     message_id = models.CharField(max_length=2555, null=True)
     state = models.CharField(max_length=255, default="collecting")
     created_time = models.DateTimeField(default=timezone.now())
-    waiting_time2 = models.IntegerField(default=2)
+    waiting_time2 = models.IntegerField(default=10)
 
 
 class Round(models.Model):

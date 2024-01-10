@@ -138,7 +138,7 @@ async def extend_time(msg: Message, bot: Bot):
     game, created = await sync_to_async(Game.objects.get_or_create)(chat_id=msg.chat.id)
     if not created and not game.over:
         game.waiting_time2 += 5
-        await sync_to_async(game.save)()
+        game.save()
         await msg.answer("Набор игроков продлён на 5 минут")
         players_text = 'Участники: \n\n' + '\n'.join(
             f"{index + 1}. @{player.username if player.username else player.first_name + ' ' + player.last_name}"
