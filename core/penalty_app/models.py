@@ -23,6 +23,7 @@ class Game(models.Model):
     state = models.CharField(max_length=255, default="collecting")
     created_time = models.DateTimeField(default=timezone.now())
     waiting_time2 = models.IntegerField(default=10)
+    owner = models.ForeignKey(TelegramUser, on_delete=models.CASCADE, null=True, blank=True, related_name='owner')
 
 
 class Round(models.Model):

@@ -6,6 +6,7 @@ from aiogram.enums import ParseMode
 from aiogram.types import InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from asgiref.sync import sync_to_async
+from django.core.exceptions import ObjectDoesNotExist
 
 from ..models import Round, Game, TelegramUser, Result
 from .. import text
@@ -89,23 +90,26 @@ async def kick_afk(game_round, bot):
         print("IN KICK AFK")
         await asyncio.sleep(10)
         game_round = await sync_to_async(Round.objects.get)(id=game_round.id)
-        game = await sync_to_async(Game.objects.get)(id=game_round.game.id)
-        choices = [1, 2, 3]
-        if game_round.moved:
-            print("KICK AFK BREAK")
-            break
-        if game_round.waiting_time2 <= 0 and game_round.user2_choice not in choices:
-            game.players.remove(game_round.user2)
-            print("kick user 2")
-            game.save()
-        if game_round.waiting_time2 <= 0 and game_round.user1_choice not in choices:
-            game.players.remove(game_round.user1)
-            print('kick user 1')
-            game.save()
-        if game_round.waiting_time2 <= 0:
-            if game_round.user2_choice not in choices or game_round.user1_choice not in choices:
-                await round_sender(game_round.game, bot)
+        try:
+            game = await sync_to_async(Game.objects.get)(id=game_round.game.id)
+            choices = [1, 2, 3]
+            if game_round.moved:
+                print("KICK AFK BREAK")
                 break
+            if game_round.waiting_time2 <= 0 and game_round.user2_choice not in choices:
+                game.players.remove(game_round.user2)
+                print("kick user 2")
+                game.save()
+            if game_round.waiting_time2 <= 0 and game_round.user1_choice not in choices:
+                game.players.remove(game_round.user1)
+                print('kick user 1')
+                game.save()
+            if game_round.waiting_time2 <= 0:
+                if game_round.user2_choice not in choices or game_round.user1_choice not in choices:
+                    await round_sender(game_round.game, bot)
+                    break
+        except ObjectDoesNotExist:
+            await bot.send_message(game_round.chat_id, "Администратор отменил игру")
 
 
 async def animation(bot, game_round):
@@ -117,136 +121,283 @@ async def animation(bot, game_round):
     print("CHOICE USER 2", game_round.user2_choice)
     name_user1 = name(game_round.user1)
     name_user2 = name(game_round.user2)
-    sleep = 0.2
+    sleep = 0.3
+    a = 0
     if game_round.user1_choice == 1 and game_round.user2_choice == 1:
         print("IN 1:1")
-        for i in text.one_one:
-            await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
-                user1=name_user1, user2=name_user2
-            ))
-            await asyncio.sleep(sleep)
-        if players <= 10:
-            result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user2,
-                                                                position=players)
-        game.players.remove(game_round.user2)
-        game_round.moved = True
-        game.save()
-        game_round.save()
-        await round_sender(game, bot)
+        try:
+            for i in text.one_one:
+                await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
+                    user1=name_user1, user2=name_user2
+                ))
+                a += 1
+                await asyncio.sleep(sleep)
+            if players <= 10:
+                result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user2,
+                                                                    position=players)
+            game.players.remove(game_round.user2)
+            game_round.moved = True
+            game.save()
+            game_round.save()
+            await round_sender(game, bot)
+        except Exception as e:
+            await asyncio.sleep(5)
+            for i in text.one_one[a:]:
+                await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
+                    user1=name_user1, user2=name_user2
+                ))
+                a += 1
+                await asyncio.sleep(1)
+            if players <= 10:
+                result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user2,
+                                                                    position=players)
+            game.players.remove(game_round.user2)
+            game_round.moved = True
+            game.save()
+            game_round.save()
+            await round_sender(game, bot)
     if game_round.user1_choice == 1 and game_round.user2_choice == 2:
-        for i in text.one_two:
+        try:
+            for i in text.one_two:
+                a += 1
+                await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
+                    user1=name_user1, user2=name_user2
+                ))
+                await asyncio.sleep(sleep)
+            if players <= 10:
+                result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user1,
+                                                                    position=players)
+            game.players.remove(game_round.user1)
 
-            await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
-                user1=name_user1, user2=name_user2
-            ))
-            await asyncio.sleep(sleep)
-        if players <= 10:
-            result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user1,
-                                                                position=players)
-        game.players.remove(game_round.user1)
-        game_round.moved = True
-        game.save()
-        game_round.save()
-        await round_sender(game, bot)
+            game_round.moved = True
+            game.save()
+            game_round.save()
+            await round_sender(game, bot)
+        except Exception as e:
+            for i in text.one_two[a:]:
+                await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
+                    user1=name_user1, user2=name_user2
+                ))
+                await asyncio.sleep(1)
+            if players <= 10:
+                result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user1,
+                                                                    position=players)
+            game.players.remove(game_round.user1)
+
+            game_round.moved = True
+            game.save()
+            game_round.save()
+            await round_sender(game, bot)
     if game_round.user1_choice == 1 and game_round.user2_choice == 3:
-        for i in text.one_three:
-            await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
-                user1=name_user1, user2=name_user2
-            ))
-            await asyncio.sleep(sleep)
-        if players <= 10:
-            result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user1,
-                                                                position=players)
-        game.players.remove(game_round.user1)
-        game_round.moved = True
-        game.save()
-        game_round.save()
-        await round_sender(game, bot)
+        try:
+            for i in text.one_three:
+                a += 1
+                await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
+                    user1=name_user1, user2=name_user2
+                ))
+                await asyncio.sleep(sleep)
+            if players <= 10:
+                result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user1,
+                                                                    position=players)
+            game.players.remove(game_round.user1)
+            game_round.moved = True
+            game.save()
+            game_round.save()
+            await round_sender(game, bot)
+        except Exception as e:
+            for i in text.one_three[a:]:
+                await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
+                    user1=name_user1, user2=name_user2
+                ))
+                await asyncio.sleep(1)
+            if players <= 10:
+                result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user1,
+                                                                    position=players)
+            game.players.remove(game_round.user1)
+            game_round.moved = True
+            game.save()
+            game_round.save()
+            await round_sender(game, bot)
     if game_round.user1_choice == 2 and game_round.user2_choice == 1:
-        for i in text.two_one:
-            await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
-                user1=name_user1, user2=name_user2
-            ))
-            await asyncio.sleep(sleep)
-        if players <= 10:
-            result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user1,
-                                                                position=players)
-        game.players.remove(game_round.user1)
-        game_round.moved = True
-        game.save()
-        game_round.save()
-        await round_sender(game, bot)
+        try:
+            for i in text.two_one:
+                a += 1
+                await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
+                    user1=name_user1, user2=name_user2
+                ))
+                await asyncio.sleep(sleep)
+            if players <= 10:
+                result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user1,
+                                                                    position=players)
+            game.players.remove(game_round.user1)
+            game_round.moved = True
+            game.save()
+            game_round.save()
+            await round_sender(game, bot)
+        except Exception as e:
+            for i in text.two_one[a:]:
+                await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
+                    user1=name_user1, user2=name_user2
+                ))
+                await asyncio.sleep(1)
+            if players <= 10:
+                result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user1,
+                                                                    position=players)
+            game.players.remove(game_round.user1)
+            game_round.moved = True
+            game.save()
+            game_round.save()
+            await round_sender(game, bot)
     if game_round.user1_choice == 2 and game_round.user2_choice == 2:
-        for i in text.two_two:
-            await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
-                user1=name_user1, user2=name_user2
-            ))
-            await asyncio.sleep(sleep)
-        if players <= 10:
-            result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user2,
-                                                                position=players)
-        game.players.remove(game_round.user2)
-        game_round.moved = True
-        game.save()
-        game_round.save()
-        await round_sender(game, bot)
+        try:
+            for i in text.two_two:
+                a += 1
+                await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
+                    user1=name_user1, user2=name_user2
+                ))
+                await asyncio.sleep(sleep)
+            if players <= 10:
+                result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user2,
+                                                                    position=players)
+            game.players.remove(game_round.user2)
+            game_round.moved = True
+            game.save()
+            game_round.save()
+            await round_sender(game, bot)
+        except Exception as e:
+            for i in text.two_two[a:]:
+                await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
+                    user1=name_user1, user2=name_user2
+                ))
+                await asyncio.sleep(1)
+            if players <= 10:
+                result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user2,
+                                                                    position=players)
+            game.players.remove(game_round.user2)
+            game_round.moved = True
+            game.save()
+            game_round.save()
+            await round_sender(game, bot)
     if game_round.user1_choice == 2 and game_round.user2_choice == 3:
-        for i in text.two_three:
-            await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
-                user1=name_user1, user2=name_user2
-            ))
-            await asyncio.sleep(sleep)
-        if players <= 10:
-            result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user1,
-                                                                position=players)
-        game.players.remove(game_round.user1)
-        game_round.moved = True
-        game.save()
-        game_round.save()
-        await round_sender(game, bot)
+        try:
+            for i in text.two_three:
+                a += 1
+                await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
+                    user1=name_user1, user2=name_user2
+                ))
+                await asyncio.sleep(sleep)
+            if players <= 10:
+                result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user1,
+                                                                    position=players)
+            game.players.remove(game_round.user1)
+            game_round.moved = True
+            game.save()
+            game_round.save()
+            await round_sender(game, bot)
+        except Exception as e:
+            for i in text.two_three[a:]:
+                await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
+                    user1=name_user1, user2=name_user2
+                ))
+                await asyncio.sleep(1)
+            if players <= 10:
+                result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user1,
+                                                                    position=players)
+            game.players.remove(game_round.user1)
+            game_round.moved = True
+            game.save()
+            game_round.save()
+            await round_sender(game, bot)
     if game_round.user1_choice == 3 and game_round.user2_choice == 1:
-        for i in text.three_one:
-            await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
-                user1=name_user1, user2=name_user2
-            ))
-            await asyncio.sleep(sleep)
-        if players <= 10:
-            result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user1,
-                                                                position=players)
-        game.players.remove(game_round.user1)
-        game_round.moved = True
-        game.save()
-        game_round.save()
-        await round_sender(game, bot)
+        try:
+            for i in text.three_one:
+                a += 1
+                await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
+                    user1=name_user1, user2=name_user2
+                ))
+                await asyncio.sleep(sleep)
+            if players <= 10:
+                result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user1,
+                                                                    position=players)
+            game.players.remove(game_round.user1)
+            game_round.moved = True
+            game.save()
+            game_round.save()
+            await round_sender(game, bot)
+        except Exception as e:
+            for i in text.three_one[a:]:
+                await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
+                    user1=name_user1, user2=name_user2
+                ))
+                await asyncio.sleep(1)
+            if players <= 10:
+                result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user1,
+                                                                    position=players)
+            game.players.remove(game_round.user1)
+            game_round.moved = True
+            game.save()
+            game_round.save()
+            await round_sender(game, bot)
     if game_round.user1_choice == 3 and game_round.user2_choice == 2:
-        for i in text.three_two:
-            await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
-                user1=name_user1, user2=name_user2
-            ))
-            await asyncio.sleep(sleep)
-        if players <= 10:
-            result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user1,
-                                                                position=players)
-        game.players.remove(game_round.user1)
-        game_round.moved = True
-        game.save()
-        game_round.save()
-        await round_sender(game, bot)
+        try:
+            for i in text.three_two:
+                a += 1
+                await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
+                    user1=name_user1, user2=name_user2
+                ))
+                await asyncio.sleep(sleep)
+            if players <= 10:
+                result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user1,
+                                                                    position=players)
+            game.players.remove(game_round.user1)
+            game_round.moved = True
+            game.save()
+            game_round.save()
+            await round_sender(game, bot)
+        except Exception as e:
+            for i in text.three_two[a:]:
+                await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
+                    user1=name_user1, user2=name_user2
+                ))
+                await asyncio.sleep(1)
+            if players <= 10:
+                result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user1,
+                                                                    position=players)
+            game.players.remove(game_round.user1)
+            game_round.moved = True
+            game.save()
+            game_round.save()
+            await round_sender(game, bot)
     if game_round.user1_choice == 3 and game_round.user2_choice == 3:
-        for i in text.three_three:
-            await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
-                user1=name_user1, user2=name_user2
-            ))
-            await asyncio.sleep(sleep)
-        if players <= 10:
-            result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user2,
-                                                                position=players)
-        game.players.remove(game_round.user2)
-        game.save()
-        game_round.moved = True
-        game_round.save()
-        await round_sender(game, bot)
-
+        try:
+            for i in text.three_three:
+                a += 1
+                await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
+                    user1=name_user1, user2=name_user2
+                ))
+                await asyncio.sleep(sleep)
+            if players <= 10:
+                result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user2,
+                                                                    position=players)
+            game.players.remove(game_round.user2)
+            game.save()
+            game_round.moved = True
+            game_round.save()
+            await round_sender(game, bot)
+        except Exception as e:
+            for i in text.three_three[a:]:
+                await bot.edit_message_text(chat_id=game_round.chat_id, message_id=game_round.message_id, text=i.format(
+                    user1=name_user1, user2=name_user2
+                ))
+                await asyncio.sleep(1)
+            if players <= 10:
+                result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user2,
+                                                                    position=players)
+            game.players.remove(game_round.user2)
+            game.save()
+            game_round.moved = True
+            game_round.save()
+            await round_sender(game, bot)
 
 async def rounder(game_round, game, bot):
     move = round_bool(game_round)
