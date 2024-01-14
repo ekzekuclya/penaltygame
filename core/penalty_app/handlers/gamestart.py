@@ -116,7 +116,7 @@ async def start_game_command(msg: Message, state: FSMContext, bot: Bot, command:
             game.message_id = sent_message.message_id
             game.save()
             await awaiting_for_start(msg, game, bot)
-            
+
 
 async def awaiting_for_start(msg, game, bot):
     while True:
@@ -196,17 +196,20 @@ async def start_now(msg: Message, bot: Bot):
     if game:
         game = game.first()
         if game.owner:
-            chat_member = await bot.get_chat_member(msg.chat.id, msg.from_user.id)
-            if chat_member.status in ['administrator', 'creator']:
-                game.waiting_time2 = 0
-                game.state = 'started'
-                game.save()
-                await sync_to_async(game.save)()
-                await round_sender(game, bot)
-                return
-            else:
-                await msg.answer("Игра создано администратором, нет прав для настреок игры")
-                return
+            try:
+                chat_member = await bot.get_chat_member(msg.chat.id, msg.from_user.id)
+                if chat_member.status in ['administrator', 'creator']:
+                    game.waiting_time2 = 0
+                    game.state = 'started'
+                    game.save()
+                    await sync_to_async(game.save)()
+                    await round_sender(game, bot)
+                    return
+                else:
+                    await msg.answer("Игра создано администратором, нет прав для настреок игры")
+                    return
+            except exceptions.TelegramBadRequest as e:
+                print(e)
         if game.state == 'started':
             link_to_msg = (
                 f"https://t.me/c/{game.chat_id[4:] if game.chat_id.startswith('-100') else game.chat_id[1:]}/"
