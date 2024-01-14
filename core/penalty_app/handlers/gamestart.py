@@ -1,5 +1,5 @@
 import random
-from aiogram import Router, Bot, F, types
+from aiogram import Router, Bot, F, types, exceptions
 from aiogram.enums import ParseMode
 from aiogram.filters import Command, CommandObject
 from aiogram.fsm.context import FSMContext
@@ -19,50 +19,77 @@ from .rounds import round_sender, name
 
 @router.message(Command("gamestart"))
 async def start_game_command(msg: Message, state: FSMContext, bot: Bot, command: CommandObject):
+    try:
+        chat_member = await bot.get_chat_member(msg.chat.id, msg.from_user.id)
+        if chat_member.status in ['administrator', 'creator']:
+            game, created = await sync_to_async(Game.objects.get_or_create)(chat_id=msg.chat.id, over=False)
+            user, cr = await sync_to_async(TelegramUser.objects.get_or_create)(user_id=msg.from_user.id)
+            if not game.owner and created:
+                game.owner = user
+                game.save()
+                players_text = 'Участники: \n'
+                builder = InlineKeyboardBuilder()
 
-    chat_member = await bot.get_chat_member(msg.chat.id, msg.from_user.id)
-    if chat_member.status in ['administrator', 'creator']:
-        game, created = await sync_to_async(Game.objects.get_or_create)(chat_id=msg.chat.id, over=False)
-        user, cr = await sync_to_async(TelegramUser.objects.get_or_create)(user_id=msg.from_user.id)
-        if not game.owner and created:
-            game.owner = user
-            game.save()
-            players_text = 'Участники: \n'
-            builder = InlineKeyboardBuilder()
+                builder.add(
+                    InlineKeyboardButton(text="Принять участие", callback_data=f"join_{game.id}")
+                )
 
-            builder.add(
-                InlineKeyboardButton(text="Принять участие", callback_data=f"join_{game.id}")
-            )
+                sent_message = await msg.answer(players_text, reply_markup=builder.as_markup())
+                game.message_id = sent_message.message_id
+                game.save()
+                await awaiting_for_start(msg, game, bot)
+            if not game.owner and not created:
+                game.delete()
+                game = await sync_to_async(Game.objects.create)(chat_id=msg.chat.id, over=False, owner=user)
+                players_text = 'Участники: \n'
+                builder = InlineKeyboardBuilder()
 
-            sent_message = await msg.answer(players_text, reply_markup=builder.as_markup())
-            game.message_id = sent_message.message_id
-            game.save()
-            await awaiting_for_start(msg, game, bot)
-        if not game.owner and not created:
-            game.delete()
-            game = await sync_to_async(Game.objects.create)(chat_id=msg.chat.id, over=False, owner=user)
-            players_text = 'Участники: \n'
-            builder = InlineKeyboardBuilder()
+                builder.add(
+                    InlineKeyboardButton(text="Принять участие", callback_data=f"join_{game.id}")
+                )
 
-            builder.add(
-                InlineKeyboardButton(text="Принять участие", callback_data=f"join_{game.id}")
-            )
+                sent_message = await msg.answer(players_text, reply_markup=builder.as_markup())
+                game.message_id = sent_message.message_id
+                game.save()
+                await awaiting_for_start(msg, game, bot)
 
-            sent_message = await msg.answer(players_text, reply_markup=builder.as_markup())
-            game.message_id = sent_message.message_id
-            game.save()
-            await awaiting_for_start(msg, game, bot)
+            elif game.owner and not created:
+                link_to_msg = (
+                    f"https://t.me/c/{game.chat_id[4:] if game.chat_id.startswith('-100') else game.chat_id[1:]}/"
+                    f"{game.message_id}")
+                sent = await msg.answer(f"[Игра уже создана администратором]({link_to_msg})", parse_mode=ParseMode.MARKDOWN)
+                await asyncio.sleep(5)
+                await bot.delete_message(sent.chat.id, sent.message_id)
+                return
 
-        elif game.owner and not created:
-            link_to_msg = (
-                f"https://t.me/c/{game.chat_id[4:] if game.chat_id.startswith('-100') else game.chat_id[1:]}/"
-                f"{game.message_id}")
-            sent = await msg.answer(f"[Игра уже создана администратором]({link_to_msg})", parse_mode=ParseMode.MARKDOWN)
-            await asyncio.sleep(5)
-            await bot.delete_message(sent.chat.id, sent.message_id)
-            return
+        else:
+            game, created = await sync_to_async(Game.objects.get_or_create)(chat_id=msg.chat.id, over=False)
+            if game.owner:
+                await msg.answer("Идёт игра от администратора")
+                return
+            if game.state == "started":
+                await msg.answer("Игра уже в игре")
+            if game.state == "collecting" and not created:
+                link_to_msg = (
+                    f"https://t.me/c/{game.chat_id[4:] if game.chat_id.startswith('-100') else game.chat_id[1:]}/"
+                    f"{game.message_id}")
+                sent = await msg.answer(f"[Игра уже создана]({link_to_msg})", parse_mode=ParseMode.MARKDOWN)
+                await asyncio.sleep(5)
+                await bot.delete_message(sent.chat.id, sent.message_id)
+                return
+            if created:
+                players_text = 'Участники: \n'
+                builder = InlineKeyboardBuilder()
 
-    else:
+                builder.add(
+                    InlineKeyboardButton(text="Принять участие", callback_data=f"join_{game.id}")
+                )
+
+                sent_message = await msg.answer(players_text, reply_markup=builder.as_markup())
+                game.message_id = sent_message.message_id
+                game.save()
+                await awaiting_for_start(msg, game, bot)
+    except exceptions.TelegramBadRequest:
         game, created = await sync_to_async(Game.objects.get_or_create)(chat_id=msg.chat.id, over=False)
         if game.owner:
             await msg.answer("Идёт игра от администратора")
@@ -89,8 +116,7 @@ async def start_game_command(msg: Message, state: FSMContext, bot: Bot, command:
             game.message_id = sent_message.message_id
             game.save()
             await awaiting_for_start(msg, game, bot)
-
-
+            
 
 async def awaiting_for_start(msg, game, bot):
     while True:
@@ -215,7 +241,6 @@ async def start_now(msg: Message, bot: Bot):
         sent = await msg.answer(no_game)
         await asyncio.sleep(10)
         await bot.delete_message(sent.chat.id, sent.message_id)
-
 
 
 @router.callback_query(F.data.startswith("join"))
