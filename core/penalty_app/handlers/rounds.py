@@ -69,10 +69,6 @@ async def round_sender(game, bot):
         await bot.send_message(chat_id=game.chat_id, text=result_text)
         game.over = True
         game.save()
-        try:
-            await bot.delete_message(chat_id=game.chat_id, message_id=game.message_id)
-        except Exception as e:
-            return
         return
 
 
@@ -100,10 +96,12 @@ async def kick_afk(game_round, bot):
                 game.players.remove(game_round.user2)
                 print("kick user 2")
                 game.save()
+                await bot.send_message(game.chat_id, text=f"Игрок {name(game.user2)} был выкинут за неактивность")
             if game_round.waiting_time2 <= 0 and game_round.user1_choice not in choices:
                 game.players.remove(game_round.user1)
                 print('kick user 1')
                 game.save()
+                await bot.send_message(game.chat_id, text=f"Игрок {name(game.user1)} был выкинут за неактивность")
             if game_round.waiting_time2 <= 0:
                 if game_round.user2_choice not in choices or game_round.user1_choice not in choices:
                     await round_sender(game_round.game, bot)
@@ -122,7 +120,7 @@ async def animation(bot, game_round):
     name_user1 = name(game_round.user1)
     name_user2 = name(game_round.user2)
     sleep = 0.3
-    a = 0
+    a = 1
     if game_round.user1_choice == 1 and game_round.user2_choice == 1:
         print("IN 1:1")
         try:
@@ -416,11 +414,9 @@ async def round_callback(query: types.CallbackQuery, bot: Bot):
     print(data)
     game = await sync_to_async(Game.objects.get)(id=data[2])
     game_round = await sync_to_async(Round.objects.get)(id=data[3])
-    user = await sync_to_async(TelegramUser.objects.get)(user_id=query.from_user.id)
+    user, created = await sync_to_async(TelegramUser.objects.get_or_create)(user_id=query.from_user.id)
     target_user = game_round.user2
-    print("USER 2 = USER 2", game_round.user2 == user)
-    print(target_user.username, user.username)
-    print(game_round.user2_choice)
+
     if game_round.user1 == user and not game_round.user1_choice:
         game_round.user1_choice = data[1]
         game_round.save()

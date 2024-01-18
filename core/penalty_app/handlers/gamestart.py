@@ -206,7 +206,11 @@ async def start_now(msg: Message, bot: Bot):
                     await round_sender(game, bot)
                     return
                 else:
-                    await msg.answer("Игра создано администратором, нет прав для настреок игры")
+                    link_to_msg = (
+                        f"https://t.me/c/{game.chat_id[4:] if game.chat_id.startswith('-100') else game.chat_id[1:]}/"
+                        f"{game.message_id}")
+                    await msg.answer(f"[Игра создана администратором, нет прав для настреок игры]({link_to_msg})",
+                                     parse_mode=ParseMode.MARKDOWN)
                     return
             except exceptions.TelegramBadRequest as e:
                 print(e)
