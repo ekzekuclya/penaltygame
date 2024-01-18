@@ -15,4 +15,4 @@ async def bot_stats(query: types.CallbackQuery, bot: Bot):
             stats_text += f"[CHAT] = {chat.title}\n[Колличество участников] = {chat.get_member_count()}"
         except Exception as e:
             print(e)
-    await query.message.answer(text=stats_text)
+    await query.message.answer(text=stats_text, parse_mode=None)
