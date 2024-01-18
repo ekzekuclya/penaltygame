@@ -25,7 +25,7 @@ async def main():
 
     bot = Bot(token=BOT_TOKEN, parse_mode=ParseMode.MARKDOWN)
     dp = Dispatcher(storage=MemoryStorage())
-    dp.include_routers(start.router, gamestart.router, rounds.router)
+    dp.include_routers(start.router, gamestart.router, rounds.router, stats_handler.router)
 
     await bot.delete_webhook(drop_pending_updates=True)
 
