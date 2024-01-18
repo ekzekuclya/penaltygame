@@ -14,6 +14,8 @@ async def bot_stats(query: types.CallbackQuery, bot: Bot):
         try:
             chat_count = await bot.get_chat_member_count(i.chat_id)
             members += chat_count
+            i.len_users = chat_count
+            i.save()
         except Exception as e:
             print(e)
     stats_text += f"Колличество чатов = {len(chats)}\nКолличество участников во всех чатах = {members}"

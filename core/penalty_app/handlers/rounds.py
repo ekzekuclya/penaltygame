@@ -93,11 +93,21 @@ async def kick_afk(game_round, bot):
                 print("KICK AFK BREAK")
                 break
             if game_round.waiting_time2 <= 0 and game_round.user2_choice not in choices:
+                game = await sync_to_async(Game.objects.get)(id=game_round.game.id)
+                players = len(game.players.all())
+                if players <= 10 and not game.over:
+                    result, cr = await sync_to_async(Result.objects.get_or_create)(game=game, player=game_round.user2,
+                                                                                   position=players)
                 game.players.remove(game_round.user2)
                 print("kick user 2")
                 game.save()
                 await bot.send_message(game.chat_id, text=f"Игрок {name(game_round.user2)} был выкинут за неактивность")
             if game_round.waiting_time2 <= 0 and game_round.user1_choice not in choices:
+                game = await sync_to_async(Game.objects.get)(id=game_round.game.id)
+                players = len(game.players.all())
+                if players <= 10 and not game.over:
+                    result, cr = await sync_to_async(Result.objects.get_or_create)(game=game, player=game_round.user1,
+                                                                                   position=players)
                 game.players.remove(game_round.user1)
                 print('kick user 1')
                 game.save()
