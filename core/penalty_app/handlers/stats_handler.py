@@ -9,10 +9,12 @@ router = Router()
 async def bot_stats(query: types.CallbackQuery, bot: Bot):
     chats = await sync_to_async(Chat.objects.all)()
     stats_text = ""
+    members = 0
     for i in chats:
         try:
-            chat = await bot.get_chat(i.chat_id)
-            stats_text += f"[CHAT] = {chat.title}\n[Колличество участников] = {chat.get_member_count()}"
+            chat_count = await bot.get_chat_member_count(i.chat_id)
+            members += chat_count
         except Exception as e:
             print(e)
+    stats_text += f"Колличество чатов = {len(chats)}\nКолличество участников во всех чатах = {members}"
     await query.message.answer(text=stats_text, parse_mode=None)
