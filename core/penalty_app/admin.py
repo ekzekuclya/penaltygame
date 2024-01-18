@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Game, TelegramUser, Round, Result
+from .models import Game, TelegramUser, Round, Result, Chat
 
 
 @admin.register(Game)
@@ -20,3 +20,9 @@ class RoundAdmin(admin.ModelAdmin):
 @admin.register(Result)
 class ResultAdmin(admin.ModelAdmin):
     list_display = ['id']
+
+
+@admin.register(Chat)
+class ChatAdmin(admin.ModelAdmin):
+    list_display = ['id']
+
