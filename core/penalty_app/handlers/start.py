@@ -6,6 +6,7 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from django.utils import timezone
 
 from .rounds import name
+from .. import kb
 from ..models import Game, TelegramUser
 from asgiref.sync import sync_to_async
 from django.core.exceptions import ObjectDoesNotExist
@@ -21,39 +22,39 @@ async def start_command(msg: Message, state: FSMContext, bot: Bot, command: Comm
     user.username = msg.from_user.username
     user.save()
     print("[START]", user.username if user.username else msg.from_user.full_name)
-
-    if game_id:
-        try:
-            game = await sync_to_async(Game.objects.get)(id=game_id)
-            game_players = game.players.all()
-            if user not in game_players:
-                if game.state == "started" and timezone.now() - game.created_time > timezone.timedelta(minutes=30) or game.state == "started" and len(game_players) == 0:
-                    game.over = True
-                    game.save()
-                    await bot.delete_message(game.chat_id, game.message_id)
-                    return
-                if game.state == "collecting":
-                    game.players.add(user)
-                    game.save()
-
-                    players_text = 'Участники: \n\n' + '\n'.join(f"{index + 1}. {name(player)}"
-                                                                     for index, player in enumerate(game.players.all()))
-                    players_text += f"\n\nОсталось {game.waiting_time2} минут"
-                    builder = InlineKeyboardBuilder()
-                    builder.add(InlineKeyboardButton(text="Принять участие \u2003", url=f"https://t.me/ekz_penaltybot?start={game.id}"))
-                    await bot.edit_message_text(chat_id=game.chat_id, message_id=game.message_id, text=players_text,
-                                                    reply_markup=builder.as_markup())
-                    chat = await bot.get_chat(game.chat_id)
-                    await msg.answer(f"Вы присоединились к игре в чате {chat.title}")
-                    return
-            elif game.state == "started" and not game.over:
-                await msg.answer("Игра уже началась")
-                return
-            elif user in game_players:
-                await msg.answer("Ты уже в игре, детка!")
-                return
-        except ObjectDoesNotExist:
-            await msg.answer('Игра не найдена')
+    await msg.answer(text="Приветствую", reply_markup=kb.statistic)
+    # if game_id:
+    #     try:
+    #         game = await sync_to_async(Game.objects.get)(id=game_id)
+    #         game_players = game.players.all()
+    #         if user not in game_players:
+    #             if game.state == "started" and timezone.now() - game.created_time > timezone.timedelta(minutes=30) or game.state == "started" and len(game_players) == 0:
+    #                 game.over = True
+    #                 game.save()
+    #                 await bot.delete_message(game.chat_id, game.message_id)
+    #                 return
+    #             if game.state == "collecting":
+    #                 game.players.add(user)
+    #                 game.save()
+    #
+    #                 players_text = 'Участники: \n\n' + '\n'.join(f"{index + 1}. {name(player)}"
+    #                                                                  for index, player in enumerate(game.players.all()))
+    #                 players_text += f"\n\nОсталось {game.waiting_time2} минут"
+    #                 builder = InlineKeyboardBuilder()
+    #                 builder.add(InlineKeyboardButton(text="Принять участие \u2003", url=f"https://t.me/ekz_penaltybot?start={game.id}"))
+    #                 await bot.edit_message_text(chat_id=game.chat_id, message_id=game.message_id, text=players_text,
+    #                                                 reply_markup=builder.as_markup())
+    #                 chat = await bot.get_chat(game.chat_id)
+    #                 await msg.answer(f"Вы присоединились к игре в чате {chat.title}")
+    #                 return
+    #         elif game.state == "started" and not game.over:
+    #             await msg.answer("Игра уже началась")
+    #             return
+    #         elif user in game_players:
+    #             await msg.answer("Ты уже в игре, детка!")
+    #             return
+    #     except ObjectDoesNotExist:
+    #         await msg.answer('Игра не найдена')
 
 
 

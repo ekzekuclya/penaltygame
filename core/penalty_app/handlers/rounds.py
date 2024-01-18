@@ -131,7 +131,7 @@ async def animation(bot, game_round):
                 a += 1
                 await asyncio.sleep(sleep)
             if players <= 10:
-                result = await sync_to_async(Result.objects.create)(game=game, player=game_round.user2,
+                result, created = await sync_to_async(Result.objects.get_or_create)(game=game, player=game_round.user2,
                                                                     position=players)
             game.players.remove(game_round.user2)
             game_round.moved = True

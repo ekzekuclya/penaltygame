@@ -16,7 +16,7 @@ async def main():
     from aiogram.enums.parse_mode import ParseMode
     from aiogram.fsm.storage.memory import MemoryStorage
     from aiogram import Bot, Dispatcher
-    from penalty_app.handlers import start, gamestart, rounds
+    from penalty_app.handlers import start, gamestart, rounds, stats_handler
     from penalty_app.models import Game
     games = await sync_to_async(Game.objects.all)()
     if games:

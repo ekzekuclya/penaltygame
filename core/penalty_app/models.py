@@ -45,3 +45,8 @@ class Result(models.Model):
 
     class Meta:
         ordering = ['position']
+
+
+class Chat(models.Model):
+    chat_id = models.CharField(max_length=2555)
+    len_users = models.PositiveIntegerField()

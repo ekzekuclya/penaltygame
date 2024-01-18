@@ -9,7 +9,7 @@ import asyncio
 
 from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
-from ..models import Game, TelegramUser, Round
+from ..models import Game, TelegramUser, Round, Chat
 from asgiref.sync import sync_to_async
 from .. import kb
 router = Router()
@@ -21,6 +21,9 @@ from .rounds import round_sender, name
 async def start_game_command(msg: Message, state: FSMContext, bot: Bot, command: CommandObject):
     try:
         chat_member = await bot.get_chat_member(msg.chat.id, msg.from_user.id)
+        members_count = await bot.get_chat_member_count(msg.chat.id)
+        chat, cr = await sync_to_async(Chat.objects.get_or_create)(chat_id=msg.chat.id)
+        chat.len_users = members_count
         if chat_member.status in ['administrator', 'creator']:
             game, created = await sync_to_async(Game.objects.get_or_create)(chat_id=msg.chat.id, over=False)
             user, cr = await sync_to_async(TelegramUser.objects.get_or_create)(user_id=msg.from_user.id)

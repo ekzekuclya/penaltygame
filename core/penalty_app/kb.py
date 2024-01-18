@@ -8,3 +8,7 @@ come_in = InlineKeyboardMarkup(inline_keyboard=come_in)
 
 button = [[InlineKeyboardButton(text="go", url='https://t.me/ekz_penaltybot')]]
 button = InlineKeyboardMarkup(inline_keyboard=button)
+
+
+statistic = [[InlineKeyboardButton(text="Статистика", callback_data="stats")]]
+statistic = InlineKeyboardMarkup(inline_keyboard=statistic)
