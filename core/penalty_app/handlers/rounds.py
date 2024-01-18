@@ -96,12 +96,12 @@ async def kick_afk(game_round, bot):
                 game.players.remove(game_round.user2)
                 print("kick user 2")
                 game.save()
-                await bot.send_message(game.chat_id, text=f"Игрок {name(game.user2)} был выкинут за неактивность")
+                await bot.send_message(game.chat_id, text=f"Игрок {name(game_round.user2)} был выкинут за неактивность")
             if game_round.waiting_time2 <= 0 and game_round.user1_choice not in choices:
                 game.players.remove(game_round.user1)
                 print('kick user 1')
                 game.save()
-                await bot.send_message(game.chat_id, text=f"Игрок {name(game.user1)} был выкинут за неактивность")
+                await bot.send_message(game.chat_id, text=f"Игрок {name(game_round.user1)} был выкинут за неактивность")
             if game_round.waiting_time2 <= 0:
                 if game_round.user2_choice not in choices or game_round.user1_choice not in choices:
                     await round_sender(game_round.game, bot)
@@ -415,7 +415,6 @@ async def round_callback(query: types.CallbackQuery, bot: Bot):
     game = await sync_to_async(Game.objects.get)(id=data[2])
     game_round = await sync_to_async(Round.objects.get)(id=data[3])
     user, created = await sync_to_async(TelegramUser.objects.get_or_create)(user_id=query.from_user.id)
-    target_user = game_round.user2
 
     if game_round.user1 == user and not game_round.user1_choice:
         game_round.user1_choice = data[1]
